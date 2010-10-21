@@ -10,11 +10,11 @@ typedef struct matrix {
   int fixed[SIZE][SIZE];
 } MATRIX;
 
-MATRIX read_matrix(void) {
+MATRIX read_matrix(char *filename) {
   MATRIX matrix;
   int i,j;
   char line[SIZE];
-  inputMatrix = fopen("example2.txt", "rt");
+  inputMatrix = fopen(filename, "rt");
 
   // init
   for (i=0; i < SIZE; i++)
@@ -148,7 +148,7 @@ MATRIX bruteforce(MATRIX matrix) {
 
 
 int main(int argc, char* argv[]) {
-  MATRIX m = read_matrix();
+  MATRIX m = read_matrix(argv[1]);
   int i,j;
   for (i = 0; i < SIZE; i++) {
     for (j = 0; j < SIZE; j++) {
