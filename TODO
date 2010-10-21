@@ -1,0 +1,2 @@
+- convert whiles to FOR's
+- puzzle rotation optimization - (parallelizable?)
