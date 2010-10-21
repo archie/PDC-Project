@@ -14,7 +14,7 @@ MATRIX read_matrix(void) {
   MATRIX matrix;
   int i,j;
   char line[SIZE];
-  inputMatrix = fopen("proper1.txt", "rt");
+  inputMatrix = fopen("example2.txt", "rt");
 
   // init
   for (i=0; i < SIZE; i++)
@@ -90,8 +90,6 @@ MATRIX bruteforce(MATRIX matrix) {
 
   while (j < SIZE) {
 
-    printf("I: %d, J: %d\n", i, j);
-
     if (matrix.fixed[i][j] == 0) {
       if (matrix.data[i][j] == 9) {
         matrix.data[i][j] = 0;
@@ -115,7 +113,7 @@ MATRIX bruteforce(MATRIX matrix) {
           j--;
         } else 
           i--;
-      }
+      } else {
 
       matrix.data[i][j]++;
       if (permissible(matrix, i, j) == 0) {
@@ -126,7 +124,11 @@ MATRIX bruteforce(MATRIX matrix) {
         } 
         else
           i--;
+      }  else {
+         printf("I: %d, J: %d, M[I,J]: %d\n", i, j, matrix.data[i][j]);
+
       }
+     }
     }
 
     if(i < SIZE-1)
