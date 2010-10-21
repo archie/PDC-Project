@@ -13,7 +13,7 @@ typedef struct matrix {
 MATRIX read_matrix(char *filename) {
   MATRIX matrix;
   int i,j;
-  char line[SIZE];
+  char line[SIZE+1];
   inputMatrix = fopen(filename, "rt");
 
   // init
@@ -22,15 +22,25 @@ MATRIX read_matrix(char *filename) {
       matrix.fixed[i][j] = 0;
 
   i = 0;
-  while (fgets(line, SIZE+2, inputMatrix)) {
+  while (fgets(line, SIZE+2 , inputMatrix)) {
     for (j = 0; j < SIZE; j++) {
       matrix.data[i][j] = line[j] - '0';
       if (matrix.data[i][j] != 0) 
         matrix.fixed[i][j] = 1;
+      //printf("%d",matrix.data[i][j]);
     }
+
     i++;
   }
-  
+  //  printf("\n\n");
+  /*int q,r;
+ for (q = 0; q < SIZE; q++) {
+   for (r = 0; r < SIZE; r++) {
+      printf("%d", matrix.data[q][r]);
+    }
+    printf("\n");
+  }
+  printf("\n");  */
   fclose(inputMatrix);
 
   return matrix;
@@ -138,6 +148,8 @@ MATRIX bruteforce(MATRIX matrix) {
 int main(int argc, char* argv[]) {
   MATRIX m = read_matrix(argv[1]);
   int i,j;
+
+  printf("\nInput Matrix:\n");
   for (i = 0; i < SIZE; i++) {
     for (j = 0; j < SIZE; j++) {
       printf("%d", m.data[i][j]);
@@ -145,6 +157,9 @@ int main(int argc, char* argv[]) {
     printf("\n");
   }
 
+    printf("\n\n");
+
+  printf("Result Matrix:\n");
   MATRIX solved = bruteforce(m);
   for (i = 0; i < SIZE; i++) {
     for (j = 0; j < SIZE; j++) {
