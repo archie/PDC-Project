@@ -61,6 +61,7 @@ int permissible(MATRIX matrix, int i_line, int j_col) {
       return 0;
   }
   
+  // check group
   int igroup = (i_line / 3) * 3;
   int jgroup = (j_col / 3) * 3;
   for (line = igroup; line < igroup+2; line++) {
@@ -71,7 +72,7 @@ int permissible(MATRIX matrix, int i_line, int j_col) {
       if ((i_line != line) &&
           (j_col != column) &&
           (matrix.data[line][column] == value)) {
-        return 0; //TODO: wiki optimise
+        return 0;
       }
     }
   }
@@ -79,10 +80,24 @@ int permissible(MATRIX matrix, int i_line, int j_col) {
   return 1;
 }
 
+void decreasePosition(int* iPointer, int* jPointer){
+  if (*iPointer == 0 && *jPointer > 0) {
+    *iPointer = SIZE - 1;
+    (*jPointer)--;
+  } else
+    (*iPointer)--;
+}
+
+void increasePosition(int* iPointer, int* jPointer){
+  if(*iPointer < SIZE-1)
+    (*iPointer)++;
+  else {
+    *iPointer = 0;
+    (*jPointer)++;
+  }
+}
 
 MATRIX bruteforce(MATRIX matrix) {
-
-  //init
     
   int i, j;
   i = 0;
@@ -90,61 +105,34 @@ MATRIX bruteforce(MATRIX matrix) {
 
   while (j < SIZE) {
 
-    if (matrix.fixed[i][j] == 0) {
-      if (matrix.data[i][j] == 9) {
-        matrix.data[i][j] = 0;
+    if (matrix.fixed[i][j] == 1)
+      // fixed cell
+      increasePosition(&i, &j);
+    else if (matrix.data[i][j] < SIZE) {    
+        // increase cell value, and check if
+        // new value is permissible
 
-        if (i == 0 && j > 0) {
-          i = SIZE - 1;
-          j--;
-        } else 
-          i--;        
-
-        while (matrix.fixed[i][j] == 1) {
-          if(i == 0 && j > 0) {
-            i = SIZE-1;
-            j--;
-          } else 
-            i--;
+        matrix.data[i][j]++;
+        if (permissible(matrix, i, j) == 1) {
+          increasePosition(&i, &j);
         }
-        
-        if (i == 0 && j > 0) {
-          i = SIZE - 1;
-          j--;
-        } else 
-          i--;
-      } else {
 
-      matrix.data[i][j]++;
-      if (permissible(matrix, i, j) == 0) {
-        //matrix.data[i][j]--;
-        if (i == 0 && j > 0) {
-          i = SIZE - 1;
-          j--;
-        } 
-        else
-          i--;
-      }  else {
-         printf("I: %d, J: %d, M[I,J]: %d\n", i, j, matrix.data[i][j]);
+    } else {
+      // tried all the values for this cell
+      // goes back to the previous non-fixed cell
 
-      }
-     }
-    }
+      matrix.data[i][j] = 0;
 
-    if(i < SIZE-1)
-      i++;
-    else {
-      i = 0;
-      j++;
-    }
-  }
+      do {
+        decreasePosition(&i, &j);
+      } while (matrix.fixed[i][j] == 1);
+
+    } // end else
+
+  } // end while
 
   return matrix;
-
-  // for each empty cell insert t='1'
-  // try if t is valid in this position (line, column, quandrant)
-  // if not increment t by 1
-}
+} // end bruteforce
 
 
 int main(int argc, char* argv[]) {
