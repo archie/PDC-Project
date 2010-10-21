@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
-
+#include <string.h>
+//#include <stddef.h>
 #define SIZE 9
 
 FILE *inputMatrix;
@@ -9,6 +10,35 @@ typedef struct matrix {
   int data[SIZE][SIZE];
   int fixed[SIZE][SIZE];
 } MATRIX;
+
+MATRIX read_matrix_with_spaces(char *filename) {
+  MATRIX matrix;
+  int i,j;
+  char line[SIZE+1];
+  char *token, cp;
+  char *delimiter=" \n";
+  int isFirstCall = 1;
+  char element[80];
+  inputMatrix = fopen(filename, "rt");
+
+  // init
+  for (i=0; i < SIZE; i++)
+    for (j=0; j<SIZE; j++) 
+      matrix.fixed[i][j] = 0;
+
+  for(i = 0; i < SIZE; i++)
+    for(j = 0; j < SIZE; j++)
+      {
+	fscanf(inputMatrix, "%s", element);
+	matrix.data[i][j] = element[0] - '0';
+      }
+  
+  
+  fclose(inputMatrix);
+
+  return matrix;
+}
+
 
 MATRIX read_matrix(char *filename) {
   MATRIX matrix;
@@ -146,7 +176,12 @@ MATRIX bruteforce(MATRIX matrix) {
 
 
 int main(int argc, char* argv[]) {
-  MATRIX m = read_matrix(argv[1]);
+
+  if(argv[1] == NULL) {
+    printf("\n\n Usage: %s filename\n\n", argv[0]);
+    exit(1);
+  } 
+MATRIX m = read_matrix_with_spaces(argv[1]);
   int i,j;
 
   printf("\nInput Matrix:\n");
@@ -167,5 +202,7 @@ int main(int argc, char* argv[]) {
     }
     printf("\n");
   }  
+  
+
   
 }
