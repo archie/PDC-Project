@@ -11,21 +11,23 @@ typedef struct matrix {
   int fixed[SIZE][SIZE];
 } MATRIX;
 
+
+
 MATRIX read_matrix_with_spaces(char *filename) {
   MATRIX matrix;
   int i,j;
   char line[SIZE+1];
-  char *token, cp;
-  char *delimiter=" \n";
-  int isFirstCall = 1;
-  char element[80];
+  char element[1];
+  int l;
   inputMatrix = fopen(filename, "rt");
 
   // init
   for (i=0; i < SIZE; i++)
     for (j=0; j<SIZE; j++) 
       matrix.fixed[i][j] = 0;
-
+	fscanf(inputMatrix, "%s", element);
+	l = element[0]-'0';
+		printf("\nl=%d",l);
   for(i = 0; i < SIZE; i++)
     for(j = 0; j < SIZE; j++)
       {
@@ -187,7 +189,7 @@ MATRIX m = read_matrix_with_spaces(argv[1]);
   printf("\nInput Matrix:\n");
   for (i = 0; i < SIZE; i++) {
     for (j = 0; j < SIZE; j++) {
-      printf("%d", m.data[i][j]);
+      printf("%d ", m.data[i][j]);
     }
     printf("\n");
   }
@@ -198,7 +200,7 @@ MATRIX m = read_matrix_with_spaces(argv[1]);
   MATRIX solved = bruteforce(m);
   for (i = 0; i < SIZE; i++) {
     for (j = 0; j < SIZE; j++) {
-      printf("%d", solved.data[i][j]);
+      printf("%d ", solved.data[i][j]);
     }
     printf("\n");
   }  
