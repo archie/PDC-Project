@@ -124,7 +124,7 @@ int permissible(MATRIX matrix, int i_line, int j_col) {
 
 void decreasePosition(int* iPointer, int* jPointer){
   if (*iPointer == 0 && *jPointer > 0) {
-    *iPointer = SIZE - 1;
+    *iPointer = SIZE - 1; //TODO why are we doing this?
     (*jPointer)--;
   } else
     (*iPointer)--;
