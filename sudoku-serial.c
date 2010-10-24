@@ -1,7 +1,5 @@
 #include <stdlib.h>
 #include <stdio.h>
-#include <string.h>
-//#include <stddef.h>
 #include <time.h>
 #define SIZE 9
 
@@ -240,24 +238,22 @@ MATRIX* bf_repository(MATRIX matrix) {
     i = current->i;
     j = current->j;
 
-    if(i == (SIZE-1) && j == (SIZE-1)){
-      result = &current->mat;
+    do{
+      increasePosition(&i, &j);
+    } while (i < SIZE && currMat.fixed[i][j] == 1);
+
+    if(i == SIZE){
+      result = &currMat;
       continue;
     }
 
-    do{
-      increasePosition(&i, &j);
-    } while (i < SIZE && j < SIZE && currMat.fixed[i][j] == 1);
-
-    if(i < SIZE && j < SIZE){
-      for(num = 0; num < SIZE; num++){
-        currMat.data[i][j]++;
-        if (permissible(currMat, i, j) == 1) {
-          item* newPath = createItem(currMat, i, j);
-          attachItem(newPath);
-        }
-      } 
-    }
+    for(num = 0; num < SIZE; num++){
+      currMat.data[i][j]++;
+      if (permissible(currMat, i, j) == 1) {
+        item* newPath = createItem(currMat, i, j);
+        attachItem(newPath);
+      }
+    } 
 
     free(current);
 
