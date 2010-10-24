@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 //#include <stddef.h>
+#include <time.h>
 #define SIZE 9
 
 FILE *inputMatrix;
@@ -11,7 +12,16 @@ typedef struct matrix {
   int fixed[SIZE][SIZE];
 } MATRIX;
 
+struct list_el {
+   MATRIX mat;
+   int i, j;
+   struct list_el *next;
+};
 
+typedef struct list_el item;
+
+item *head;
+item *tail;
 
 MATRIX read_matrix_with_spaces(char *filename) {
   MATRIX matrix;
@@ -25,66 +35,30 @@ MATRIX read_matrix_with_spaces(char *filename) {
   for (i=0; i < SIZE; i++)
     for (j=0; j<SIZE; j++) 
       matrix.fixed[i][j] = 0;
-	fscanf(inputMatrix, "%s", element);
+	
+  fscanf(inputMatrix, "%s", element);
 	l = element[0]-'0';
-		printf("\nl=%d",l);
+	printf("\nl=%d",l);
+
   for(i = 0; i < SIZE; i++)
-    for(j = 0; j < SIZE; j++)
-      {
-	fscanf(inputMatrix, "%s", element);
-	matrix.data[i][j] = element[0] - '0';
-      }
-  
-  
-  fclose(inputMatrix);
-
-  return matrix;
-}
-
-
-MATRIX read_matrix(char *filename) {
-  MATRIX matrix;
-  int i,j;
-  char line[SIZE+1];
-  inputMatrix = fopen(filename, "rt");
-
-  // init
-  for (i=0; i < SIZE; i++)
-    for (j=0; j<SIZE; j++) 
-      matrix.fixed[i][j] = 0;
-
-  i = 0;
-  while (fgets(line, SIZE+2 , inputMatrix)) {
-    for (j = 0; j < SIZE; j++) {
-      matrix.data[i][j] = line[j] - '0';
-      if (matrix.data[i][j] != 0) 
+    for(j = 0; j < SIZE; j++){
+	    fscanf(inputMatrix, "%s", element);
+	    matrix.data[i][j] = element[0] - '0';
+      if (matrix.data[i][j] != 0)
         matrix.fixed[i][j] = 1;
-      //printf("%d",matrix.data[i][j]);
     }
-
-    i++;
-  }
-  //  printf("\n\n");
-  /*int q,r;
- for (q = 0; q < SIZE; q++) {
-   for (r = 0; r < SIZE; r++) {
-      printf("%d", matrix.data[q][r]);
-    }
-    printf("\n");
-  }
-  printf("\n");  */
+  
   fclose(inputMatrix);
 
   return matrix;
 }
-
 
 int permissible(MATRIX matrix, int i_line, int j_col) {
 
   int line, column;
   int value = matrix.data[i_line][j_col];
 
-  // check line
+  // check same column
   for (line = 0; line < SIZE; line++) {
     if (matrix.data[line][j_col] == 0)
       continue;
@@ -94,7 +68,7 @@ int permissible(MATRIX matrix, int i_line, int j_col) {
       return 0;
   }
 
-  // check column
+  // check same line
   for (column = 0; column < SIZE; column++) {
     if (matrix.data[i_line][column] == 0)
       continue;
@@ -123,19 +97,19 @@ int permissible(MATRIX matrix, int i_line, int j_col) {
 }
 
 void decreasePosition(int* iPointer, int* jPointer){
-  if (*iPointer == 0 && *jPointer > 0) {
-    *iPointer = SIZE - 1; //TODO why are we doing this?
-    (*jPointer)--;
-  } else
+  if (*jPointer == 0 && *iPointer > 0) {
+    *jPointer = SIZE - 1;
     (*iPointer)--;
+  } else
+    (*jPointer)--;
 }
 
 void increasePosition(int* iPointer, int* jPointer){
-  if(*iPointer < SIZE-1)
-    (*iPointer)++;
-  else {
-    *iPointer = 0;
+  if(*jPointer < SIZE-1)
     (*jPointer)++;
+  else {
+    *jPointer = 0;
+    (*iPointer)++;
   }
 }
 
@@ -145,7 +119,7 @@ MATRIX bruteforce(MATRIX matrix) {
   i = 0;
   j = 0;
 
-  while (j < SIZE) {
+  while (i < SIZE) {
 
     if (matrix.fixed[i][j] == 1)
       // fixed cell
@@ -177,6 +151,124 @@ MATRIX bruteforce(MATRIX matrix) {
 } // end bruteforce
 
 
+item* createItem(MATRIX matrix, int i, int j){
+  item * curr = (item *)malloc(sizeof(item));
+
+  int x, y;
+  //copy matrix
+  for(x = 0; x < SIZE; x++){
+    for(y = 0; y < SIZE; y++){
+      curr->mat.data[x][y] = matrix.data[x][y];
+      curr->mat.fixed[x][y] = matrix.fixed[x][y]; 
+    }
+  }
+
+
+  curr->i = i;
+  curr->j = j;
+  curr->next = NULL;
+  
+  return curr;
+}
+
+void attachItem(item* newItem){
+
+  if(head == NULL){
+    head = newItem;
+    tail = newItem;
+  } else {
+    tail->next = newItem;
+    tail = newItem;
+  }
+}
+
+item* removeItem(){
+  item* result = NULL;
+  if(head != NULL){
+    result = head;
+    head = result->next;
+    if(head == NULL){
+      tail = NULL;
+    }
+  }
+  return result;
+}
+
+
+MATRIX* bf_repository(MATRIX matrix) {
+
+  head = NULL;
+  tail = NULL;
+
+  int i = 0;
+  int j = 0;
+
+  /* Initialize permissible matrix repository */
+  // (should be done only by the master thread)
+
+  while (matrix.fixed[i][j] == 1)
+    increasePosition(&i, &j);
+
+  int num;
+  for(num = 0; num < SIZE; num++){
+    matrix.data[i][j]++;    
+    if (permissible(matrix, i, j) == 1) {
+      item* newPath = createItem(matrix, i, j);
+      attachItem(newPath);
+    } 
+  }
+
+  /* End initialization */
+
+  /* Begin of parallel block
+      - result is a global variable
+      - current, i and j are private variables
+      - access to methods removeItem 
+        and attachItem should be exclusive
+  */
+
+  /* Remove matrix from repository, and
+     move to the next non-fixed position,
+     adding permissible matrices to the
+     repository for the next iteration 
+   */
+
+  MATRIX* result = NULL;
+  item* current = removeItem();
+  while(current != NULL && result == NULL){
+    MATRIX currMat = current->mat;
+    i = current->i;
+    j = current->j;
+
+    if(i == (SIZE-1) && j == (SIZE-1)){
+      result = &current->mat;
+      continue;
+    }
+
+    do{
+      increasePosition(&i, &j);
+    } while (i < SIZE && j < SIZE && currMat.fixed[i][j] == 1);
+
+    if(i < SIZE && j < SIZE){
+      for(num = 0; num < SIZE; num++){
+        currMat.data[i][j]++;
+        if (permissible(currMat, i, j) == 1) {
+          item* newPath = createItem(currMat, i, j);
+          attachItem(newPath);
+        }
+      } 
+    }
+
+    free(current);
+
+    current = removeItem();
+   }
+
+  /* End of parallel block */ 
+
+  return result;
+}
+
 int main(int argc, char* argv[]) {
 
   if(argv[1] == NULL) {
@@ -194,10 +286,19 @@ MATRIX m = read_matrix_with_spaces(argv[1]);
     printf("\n");
   }
 
-    printf("\n\n");
+  printf("\n\n");
 
+  MATRIX* result = bf_repository(m);
+  
+  if(result == NULL){
+    printf("No result!\n");
+    return;
+  }
+  
+  MATRIX solved = *result;
+  //MATRIX solved = bruteforce(m);
+  
   printf("Result Matrix:\n");
-  MATRIX solved = bruteforce(m);
   for (i = 0; i < SIZE; i++) {
     for (j = 0; j < SIZE; j++) {
       printf("%d ", solved.data[i][j]);
@@ -205,6 +306,5 @@ MATRIX m = read_matrix_with_spaces(argv[1]);
     printf("\n");
   }  
   
-
   
 }
