@@ -1,5 +1,4 @@
 import sys
-import pickle
 import time
 import os, glob
 import subprocess 
@@ -19,7 +18,7 @@ else:
 
 times = []
 times_all = {}
-run_no_times = 5
+run_no_times = 10
 
 for sudoku in files:
     one_sum = 0
@@ -30,25 +29,23 @@ for sudoku in files:
                                         stderr=subprocess.PIPE).communicate()
         [real] = error.strip().split()[:1]
         print "\t%d,%f" % (x,float(real))
+        times.append(float(real))
         times_all[(sudoku,x)] = float(real)
         one_sum = one_sum + float(real)
 
     one_avg = one_sum/run_no_times
-    print "%s,%f" % (sudoku, one_avg)
     times.append(one_avg)
         
 
 total = sum(times)
 avg = total/len(times)
+print 'Total average: %f' % avg
 
-#print 'Average: %f' % avg
-
-#Log runs
-storage = {}
-storage['time'] = time.localtime()
-storage['path'] = path
-storage['average'] = avg
-storage['detailed'] = times_all
+# persistance
 logfile = open(str(time.time()) + '.log', 'w')
-pickle.dump(storage, logfile)
+logfile.write(str(path) + '\n')
+for sudoku,x in times_all.iteritems():
+    (name,key) = sudoku
+    logfile.write("%s,%d,%f\n" % (name,key,x))
+
 logfile.close()
