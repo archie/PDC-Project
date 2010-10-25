@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <time.h>
 #define SIZE 9
+#define STEP 81
 
 FILE *inputMatrix;
 
@@ -154,11 +155,14 @@ item* createItem(MATRIX matrix, int i, int j){
 
   int x, y;
   //copy matrix
+  //printf("New possibility:\n");
   for(x = 0; x < SIZE; x++){
     for(y = 0; y < SIZE; y++){
       curr->mat.data[x][y] = matrix.data[x][y];
       curr->mat.fixed[x][y] = matrix.fixed[x][y]; 
+      //printf("%d ", matrix.data[x][y]);
     }
+    //printf("\n");
   }
 
 
@@ -240,20 +244,47 @@ MATRIX* bf_repository(MATRIX matrix) {
 
     do{
       increasePosition(&i, &j);
-    } while (i < SIZE && currMat.fixed[i][j] == 1);
+    } while (currMat.fixed[i][j] == 1 && i < SIZE);
+
+    int level = 1;
+
+    while (level > 0 && i < SIZE && result == NULL) {
+      if (currMat.fixed[i][j] == 1)
+        increasePosition(&i, &j);
+      else if (level <= STEP && currMat.data[i][j] < SIZE) {    
+          // increase cell value, and check if
+          // new value is permissible
+          currMat.data[i][j]++;
+
+          if (permissible(currMat, i, j) == 1) {
+            if(level < STEP) {
+              increasePosition(&i, &j);
+              level++;
+            } else {
+              item* newPath = createItem(currMat, i, j);
+              attachItem(newPath);
+              //sleep(10);
+            }
+          }
+      } else {
+        // tried all the values for this cell
+        // goes back to the previous non-fixed cell
+
+        currMat.data[i][j] = 0;
+
+        do {
+          decreasePosition(&i, &j);
+        } while (currMat.fixed[i][j] == 1);
+
+        level--;
+      } // end else
+
+    } // end while
 
     if(i == SIZE){
       result = &currMat;
       continue;
     }
-
-    for(num = 0; num < SIZE; num++){
-      currMat.data[i][j]++;
-      if (permissible(currMat, i, j) == 1) {
-        item* newPath = createItem(currMat, i, j);
-        attachItem(newPath);
-      }
-    } 
 
     free(current);
 
@@ -264,6 +295,7 @@ MATRIX* bf_repository(MATRIX matrix) {
 
   return result;
 }
+
 
 int main(int argc, char* argv[]) {
 
