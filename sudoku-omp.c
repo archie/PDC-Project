@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <time.h>
 #define SIZE 9
+#define STEP 40
 
 FILE *inputMatrix;
 
@@ -239,9 +240,9 @@ MATRIX* bf_repository(MATRIX matrix) {
      adding permissible matrices to the
      repository for the next iteration 
    */
-  item *current;
-  MATRIX* result = NULL;
 
+  MATRIX* result = NULL;
+  item* current;
 
 #pragma omp parallel shared(result) private(num, i,j, current) 
 {
@@ -258,7 +259,43 @@ MATRIX* bf_repository(MATRIX matrix) {
 
     do{
       increasePosition(&i, &j);
-    } while (i < SIZE && currMat.fixed[i][j] == 1);
+    } while (currMat.fixed[i][j] == 1 && i < SIZE);
+
+    int level = 1;
+
+    while (level > 0 && i < SIZE && result == NULL) {
+      if (currMat.fixed[i][j] == 1)
+        increasePosition(&i, &j);
+      else if (level <= STEP && currMat.data[i][j] < SIZE) {    
+          // increase cell value, and check if
+          // new value is permissible
+          currMat.data[i][j]++;
+
+          if (permissible(currMat, i, j) == 1) {
+            if(level < STEP) {
+              increasePosition(&i, &j);
+              level++;
+            } else {
+              item* newPath = createItem(currMat, i, j);
+#pragma omp critical (pool)
+              attachItem(newPath);
+              //sleep(10);
+            }
+          }
+      } else {
+        // tried all the values for this cell
+        // goes back to the previous non-fixed cell
+
+        currMat.data[i][j] = 0;
+
+        do {
+          decreasePosition(&i, &j);
+        } while (currMat.fixed[i][j] == 1);
+
+        level--;
+      } // end else
+
+    } // end while
 
     if(i == SIZE){
       finalResult = currMat;
@@ -266,22 +303,11 @@ MATRIX* bf_repository(MATRIX matrix) {
       continue;
     }
 
-
-    for(num = 0; num < SIZE; num++){
-      currMat.data[i][j]++;
-      if (permissible(currMat, i, j) == 1) {
-        item* newPath = createItem(currMat, i, j);
-          
-#pragma omp critical (pool) 
-        attachItem(newPath);
-        
-      }
-    } 
     free(current);
-    
+
 #pragma omp critical (pool)
     current = removeItem();
-    
+
   } /* end while */
 } /* End of parallel block */ 
 
