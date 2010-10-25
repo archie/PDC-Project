@@ -1,8 +1,12 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
+#include <omp.h>
+
 #define SIZE 9
 #define STEP 40
+
+long boards_created[8]; // assuming we will never run this on more than 8 cores
 
 FILE *inputMatrix;
 
@@ -153,9 +157,9 @@ MATRIX bruteforce(MATRIX matrix) {
 
 
 item* createItem(MATRIX matrix, int i, int j){
-  item * curr = (item *)malloc(sizeof(item));
+  boards_created[omp_get_thread_num()]++;
 
-  
+  item * curr = (item *)malloc(sizeof(item));
 
   int x, y;
   //copy matrix
@@ -168,12 +172,9 @@ item* createItem(MATRIX matrix, int i, int j){
     //printf("\n");
   }
 
-
   curr->i = i;
   curr->j = j;
   curr->next = NULL;
-
-
 
   // usleep(100000);
   return curr;
@@ -331,25 +332,28 @@ MATRIX m = read_matrix_with_spaces(argv[1]);
     printf("\n");
   }
 
-  printf("\n\n");
-
   MATRIX* result = bf_repository(m);
   
   if(result == NULL){
     printf("No result!\n");
-    return;
+    return 1;
   }
   
   MATRIX solved = *result;
-  //MATRIX solved = bruteforce(m);
-  
-  printf("Result Matrix:\n");
+  //MATRIX solved = bruteforce(m);  
+  printf("\nResult Matrix:\n");
   for (i = 0; i < SIZE; i++) {
     for (j = 0; j < SIZE; j++) {
       printf("%d ", finalResult.data[i][j]);
     }
     printf("\n");
   }  
-  
-  
+
+  printf("\nHas %d threads\n", omp_get_max_threads());
+  int thread;
+  for (thread = 0; thread < omp_get_max_threads(); thread++) {
+    printf("Thread %d: %ld\n", thread, boards_created[thread]);
+  }
+
+  return 0;
 }

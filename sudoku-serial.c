@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <time.h>
 #define SIZE 9
-#define STEP 81
+#define STEP 40
 
 FILE *inputMatrix;
 
