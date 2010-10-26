@@ -4,7 +4,7 @@
 #include <omp.h>
 
 #define SIZE 9
-#define STEP 40
+#define INIT_STEP 40
 
 long boards_created[8]; // assuming we will never run this on more than 8 cores
 
@@ -203,29 +203,53 @@ item* removeItem(){
   return result;
 }
 
-
-MATRIX* bf_repository(MATRIX matrix) {
-
-  head = NULL;
-  tail = NULL;
+void initializePool(MATRIX matrix){
 
   int i = 0;
   int j = 0;
 
-  /* Initialize permissible matrix repository */
+  int level = 1;
+
+  while (level > 0 && i < SIZE) {
+    if (level <= INIT_STEP && matrix.data[i][j] < SIZE) {
+      // increase cell value, and check if
+      // new value is permissible
+      matrix.data[i][j]++;
+      if (permissible(matrix, i, j) == 1) {
+        do{
+          increasePosition(&i, &j);
+        } while (i < SIZE && matrix.fixed[i][j] == 1);
+
+        if(level < INIT_STEP) {
+          level++;
+        } else {
+          item* newPath = createItem(matrix, i, j);
+          attachItem(newPath);
+        }
+      }
+    } else {
+      // tried all the values for this cell
+      // goes back to the previous non-fixed cell
+       matrix.data[i][j] = 0;
+       do {
+        decreasePosition(&i, &j);
+       } while (i >= 0 && matrix.fixed[i][j] == 1);
+
+        level--;
+    } // end else
+  } // end while
+
+}
+
+MATRIX* bf_pool(MATRIX matrix) {
+
+  head = NULL;
+  tail = NULL;
+
+  /* Initialize permissible matrix pool */
   // (should be done only by the master thread)
 
-  while (matrix.fixed[i][j] == 1)
-    increasePosition(&i, &j);
-
-  int num;
-  for(num = 0; num < SIZE; num++){
-    matrix.data[i][j]++;    
-    if (permissible(matrix, i, j) == 1) {
-      item* newPath = createItem(matrix, i, j);
-      attachItem(newPath);
-    } 
-  }
+  initializePool(matrix);
 
   /* End initialization */
 
@@ -236,66 +260,45 @@ MATRIX* bf_repository(MATRIX matrix) {
         and attachItem should be exclusive
   */
 
-  /* Remove matrix from repository, and
-     move to the next non-fixed position,
-     adding permissible matrices to the
-     repository for the next iteration 
+  /* Remove matrix from pool, and
+     try to solve it
    */
 
   MATRIX* result = NULL;
   item* current;
+  int i,j;
 
-#pragma omp parallel shared(result) private(num, i,j, current) 
+#pragma omp parallel shared(result) private(i,j,current)
 {
-
 #pragma omp critical (pool) 
 {
-    current = removeItem();
+  current = removeItem();
 }
-
   while(current != NULL && result == NULL){
     MATRIX currMat = current->mat;
     i = current->i;
     j = current->j;
 
-    do{
-      increasePosition(&i, &j);
-    } while (currMat.fixed[i][j] == 1 && i < SIZE);
+    while (i >= 0 && i < SIZE && result == NULL) {
+      if (currMat.data[i][j] < SIZE) {    
+        // increase cell value, and check if
+        // new value is permissible
+        currMat.data[i][j]++;
 
-    int level = 1;
-
-    while (level > 0 && i < SIZE && result == NULL) {
-      if (currMat.fixed[i][j] == 1)
-        increasePosition(&i, &j);
-      else if (level <= STEP && currMat.data[i][j] < SIZE) {    
-          // increase cell value, and check if
-          // new value is permissible
-          currMat.data[i][j]++;
-
-          if (permissible(currMat, i, j) == 1) {
-            if(level < STEP) {
-              increasePosition(&i, &j);
-              level++;
-            } else {
-              item* newPath = createItem(currMat, i, j);
-#pragma omp critical (pool)
-              attachItem(newPath);
-              //sleep(10);
-            }
-          }
+        if (permissible(currMat, i, j) == 1) {
+          do{
+            increasePosition(&i, &j);
+          } while (i < SIZE && currMat.fixed[i][j] == 1);
+        }
       } else {
         // tried all the values for this cell
         // goes back to the previous non-fixed cell
-
         currMat.data[i][j] = 0;
 
         do {
           decreasePosition(&i, &j);
-        } while (currMat.fixed[i][j] == 1);
-
-        level--;
+        } while (i >= 0 && currMat.fixed[i][j] == 1);
       } // end else
-
     } // end while
 
     if(i == SIZE){
@@ -308,9 +311,9 @@ MATRIX* bf_repository(MATRIX matrix) {
 
 #pragma omp critical (pool)
     current = removeItem();
+   } // end outer while (matrix pool iteration)
 
-  } /* end while */
-} /* End of parallel block */ 
+}  /* End of parallel block */ 
 
   return result;
 }
@@ -332,7 +335,7 @@ MATRIX m = read_matrix_with_spaces(argv[1]);
     printf("\n");
   }
 
-  MATRIX* result = bf_repository(m);
+  MATRIX* result = bf_pool(m);
   
   if(result == NULL){
     printf("No result!\n");
