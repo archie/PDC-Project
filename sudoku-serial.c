@@ -2,32 +2,34 @@
 #include <stdio.h>
 #include <time.h>
 #define SIZE 9
-#define STEP 40
+#define STEP 80
 
 FILE *inputMatrix;
 
 typedef struct matrix {
-  int data[SIZE][SIZE];
-  int fixed[SIZE][SIZE];
+  short data[SIZE][SIZE];
+  short fixed[SIZE][SIZE];
 } MATRIX;
 
 struct list_el {
    MATRIX mat;
-   int i, j;
+   short i, j;
    struct list_el *next;
 };
 
 typedef struct list_el item;
+
+MATRIX solution;
 
 item *head;
 item *tail;
 
 MATRIX read_matrix_with_spaces(char *filename) {
   MATRIX matrix;
-  int i,j;
+  short i,j;
   char line[SIZE+1];
   char element[1];
-  int l;
+  short l;
   inputMatrix = fopen(filename, "rt");
 
   // init
@@ -52,10 +54,10 @@ MATRIX read_matrix_with_spaces(char *filename) {
   return matrix;
 }
 
-int permissible(MATRIX matrix, int i_line, int j_col) {
+short permissible(MATRIX matrix, short i_line, short j_col) {
 
-  int line, column;
-  int value = matrix.data[i_line][j_col];
+  short line, column;
+  short value = matrix.data[i_line][j_col];
 
   // check same column
   for (line = 0; line < SIZE; line++) {
@@ -77,8 +79,8 @@ int permissible(MATRIX matrix, int i_line, int j_col) {
   }
   
   // check group
-  int igroup = (i_line / 3) * 3;
-  int jgroup = (j_col / 3) * 3;
+  short igroup = (i_line / 3) * 3;
+  short jgroup = (j_col / 3) * 3;
   for (line = igroup; line < igroup+2; line++) {
     for (column = jgroup; column < jgroup+2; column++) {
       if (matrix.data[line][column] == 0)
@@ -95,65 +97,70 @@ int permissible(MATRIX matrix, int i_line, int j_col) {
   return 1;
 }
 
-void decreasePosition(int* iPointer, int* jPointer){
-  if (*jPointer == 0 && *iPointer > 0) {
-    *jPointer = SIZE - 1;
-    (*iPointer)--;
-  } else
-    (*jPointer)--;
-}
-
-void increasePosition(int* iPointer, int* jPointer){
-  if(*jPointer < SIZE-1)
-    (*jPointer)++;
-  else {
-    *jPointer = 0;
-    (*iPointer)++;
-  }
-}
-
-MATRIX bruteforce(MATRIX matrix) {
-    
-  int i, j;
-  i = 0;
-  j = 0;
-
-  while (i < SIZE) {
-
-    if (matrix.fixed[i][j] == 1)
-      // fixed cell
-      increasePosition(&i, &j);
-    else if (matrix.data[i][j] < SIZE) {    
-        // increase cell value, and check if
-        // new value is permissible
-
-        matrix.data[i][j]++;
-        if (permissible(matrix, i, j) == 1) {
-          increasePosition(&i, &j);
-        }
-
-    } else {
-      // tried all the values for this cell
-      // goes back to the previous non-fixed cell
-
-      matrix.data[i][j] = 0;
-
+void decreasePosition(MATRIX* matrix, short* iPointer, short* jPointer){
       do {
-        decreasePosition(&i, &j);
-      } while (matrix.fixed[i][j] == 1);
+        if (*jPointer == 0 && *iPointer > 0) {
+          *jPointer = SIZE - 1;
+          (*iPointer)--;
+        } else
+          (*jPointer)--;
+      } while (*jPointer >= 0 && (*matrix).fixed[*iPointer][*jPointer] == 1);
+}
 
-    } // end else
+void increasePosition(MATRIX* matrix, short* iPointer, short* jPointer){
+  
+  do{
+    if(*jPointer < SIZE-1)
+      (*jPointer)++;
+    else {
+      *jPointer = 0;
+      (*iPointer)++;
+    }
+  } while (*iPointer < SIZE && (*matrix).fixed[*iPointer][*jPointer]);
+}
 
-  } // end while
+//MATRIX bruteforce(MATRIX matrix) {
+//    
+//  int i, j;
+//  i = 0;
+//  j = 0;
+//
+//  while (i < SIZE) {
+//
+//    if (matrix.fixed[i][j] == 1)
+//      // fixed cell
+//      increasePosition(&i, &j);
+//    else if (matrix.data[i][j] < SIZE) {    
+//        // increase cell value, and check if
+//        // new value is permissible
+//
+//        matrix.data[i][j]++;
+//        if (permissible(matrix, i, j) == 1) {
+//          increasePosition(&i, &j);
+//        }
+//
+//    } else {
+//      // tried all the values for this cell
+//      // goes back to the previous non-fixed cell
+//
+//      matrix.data[i][j] = 0;
+//
+//      do {
+//        decreasePosition(&i, &j);
+//      } while (matrix.fixed[i][j] == 1);
+//
+//    } // end else
+//
+//  } // end while
+//
+//  return matrix;
+//} // end bruteforce
 
-  return matrix;
-} // end bruteforce
 
-
-item* createItem(MATRIX matrix, int i, int j){
+item* createItem(MATRIX matrix, short i, short j){
   item * curr = (item *)malloc(sizeof(item));
 
-  int x, y;
+  short x, y;
   //copy matrix
   //printf("New possibility:\n");
   for(x = 0; x < SIZE; x++){
@@ -197,30 +204,33 @@ item* removeItem(){
 }
 
 
-MATRIX* bf_repository(MATRIX matrix) {
+/* Initialize permissible matrix pool */
+void initializePool(MATRIX* matrix){
 
-  head = NULL;
-  tail = NULL;
+  short i = 0;
+  short j = 0;
 
-  int i = 0;
-  int j = 0;
+  if ((*matrix).fixed[i][j] == 1)
+    increasePosition(matrix, &i, &j);
 
-  /* Initialize permissible matrix repository */
-  // (should be done only by the master thread)
-
-  while (matrix.fixed[i][j] == 1)
-    increasePosition(&i, &j);
-
-  int num;
+  short num;
   for(num = 0; num < SIZE; num++){
-    matrix.data[i][j]++;    
-    if (permissible(matrix, i, j) == 1) {
-      item* newPath = createItem(matrix, i, j);
+    ((*matrix).data[i][j])++;    
+    if (permissible(*matrix, i, j) == 1) {
+      item* newPath = createItem(*matrix, i, j);
       attachItem(newPath);
     } 
   }
 
-  /* End initialization */
+}
+
+short bf_pool(MATRIX matrix) {
+
+  head = NULL;
+  tail = NULL;
+
+  initializePool(&matrix);
+
 
   /* Begin of parallel block
       - result is a global variable
@@ -235,30 +245,27 @@ MATRIX* bf_repository(MATRIX matrix) {
      repository for the next iteration 
    */
 
-  MATRIX* result = NULL;
+  short found = 0;
+  short i, j;
   item* current = removeItem();
-  while(current != NULL && result == NULL){
+  while(current != NULL && found == 0){
     MATRIX currMat = current->mat;
     i = current->i;
     j = current->j;
 
-    do{
-      increasePosition(&i, &j);
-    } while (currMat.fixed[i][j] == 1 && i < SIZE);
+    increasePosition(&currMat, &i, &j);
 
     int level = 1;
 
-    while (level > 0 && i < SIZE && result == NULL) {
-      if (currMat.fixed[i][j] == 1)
-        increasePosition(&i, &j);
-      else if (level <= STEP && currMat.data[i][j] < SIZE) {    
+    while (level > 0 && i < SIZE && found == 0) {
+      if (level <= STEP && currMat.data[i][j] < SIZE) {    
           // increase cell value, and check if
           // new value is permissible
           currMat.data[i][j]++;
 
           if (permissible(currMat, i, j) == 1) {
             if(level < STEP) {
-              increasePosition(&i, &j);
+              increasePosition(&currMat, &i, &j);
               level++;
             } else {
               item* newPath = createItem(currMat, i, j);
@@ -267,22 +274,18 @@ MATRIX* bf_repository(MATRIX matrix) {
             }
           }
       } else {
-        // tried all the values for this cell
         // goes back to the previous non-fixed cell
 
         currMat.data[i][j] = 0;
-
-        do {
-          decreasePosition(&i, &j);
-        } while (currMat.fixed[i][j] == 1);
-
+        decreasePosition(&currMat, &i, &j);
         level--;
       } // end else
 
     } // end while
 
     if(i == SIZE){
-      result = &currMat;
+      found = 1;
+      solution = currMat;
       continue;
     }
 
@@ -293,7 +296,7 @@ MATRIX* bf_repository(MATRIX matrix) {
 
   /* End of parallel block */ 
 
-  return result;
+  return found;
 }
 
 
@@ -303,7 +306,10 @@ int main(int argc, char* argv[]) {
     printf("\n\n Usage: %s filename\n\n", argv[0]);
     exit(1);
   } 
-MATRIX m = read_matrix_with_spaces(argv[1]);
+
+
+  MATRIX m = read_matrix_with_spaces(argv[1]);
+
   int i,j;
 
   printf("\nInput Matrix:\n");
@@ -316,23 +322,21 @@ MATRIX m = read_matrix_with_spaces(argv[1]);
 
   printf("\n\n");
 
-  MATRIX* result = bf_repository(m);
+  short hasSolution = bf_pool(m);
   
-  if(result == NULL){
+  if(hasSolution == 0){
     printf("No result!\n");
-    return;
+    return 1;
   }
-  
-  MATRIX solved = *result;
-  //MATRIX solved = bruteforce(m);
   
   printf("Result Matrix:\n");
   for (i = 0; i < SIZE; i++) {
     for (j = 0; j < SIZE; j++) {
-      printf("%d ", solved.data[i][j]);
+      printf("%d ", solution.data[i][j]);
     }
     printf("\n");
   }  
   
-  
+  return 0;
+
 }
