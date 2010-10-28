@@ -3,7 +3,8 @@
 #include <time.h>
 #include <omp.h>
 
-#define SIZE 9
+//#define SIZE 9
+int SIZE;
 #define STEP 80
 
 long boards_processed[8]; // assuming we will never run this on more than 8 cores
@@ -11,8 +12,10 @@ long boards_processed[8]; // assuming we will never run this on more than 8 core
 FILE *inputMatrix;
 
 typedef struct matrix {
-  short data[SIZE][SIZE];
-  short fixed[SIZE][SIZE];
+  //  short data[SIZE][SIZE];
+  //  short fixed[SIZE][SIZE];
+  short **data;
+  short **fixed;
 } MATRIX;
 
 struct list_el {
@@ -28,6 +31,53 @@ MATRIX solution;
 item *head;
 item *tail;
 
+
+MATRIX read_matrix_with_spaces(char *filename) {
+ 
+  inputMatrix = fopen(filename, "rt");
+
+  int element_int;
+  int l;
+
+  fscanf(inputMatrix, "%d", &element_int);
+  l = element_int;
+  SIZE = l*l;
+  printf("\nl=%d\tSIZE=%d",l, SIZE);
+
+
+ int i,j;  
+  MATRIX matrix;  
+matrix.data = (short**)malloc(SIZE*sizeof(short*));
+
+ for (i=0;i<SIZE;i++)
+  matrix.data[i] = (short*) malloc (SIZE * sizeof (short));
+
+matrix.fixed = (short**) malloc(SIZE * sizeof(short*));
+
+ for (i=0;i<SIZE;i++)
+  matrix.fixed[i] = (short*) malloc (SIZE * sizeof (short));
+
+  // init
+ for (i=0; i<SIZE; i++)
+   for (j=0; j<SIZE; j++) {     
+     matrix.fixed[i][j] = 0;
+   }
+
+  for(i = 0; i < SIZE; i++)
+    for(j = 0; j < SIZE; j++){
+      fscanf(inputMatrix, "%d", &element_int);
+      matrix.data[i][j] = element_int;
+      if (matrix.data[i][j] != 0)
+        matrix.fixed[i][j] = 1;
+    }
+
+  fclose(inputMatrix);
+
+  return matrix;
+}
+
+
+/*
 MATRIX read_matrix_with_spaces(char *filename) {
   MATRIX matrix;
   short i,j;
@@ -57,6 +107,7 @@ MATRIX read_matrix_with_spaces(char *filename) {
 
   return matrix;
 }
+*/
 
 short permissible(MATRIX matrix, short i_line, short j_col) {
 
@@ -163,6 +214,17 @@ void increasePosition(MATRIX* matrix, short* iPointer, short* jPointer){
 
 item* createItem(MATRIX matrix, short i, short j){
   item * curr = (item *)malloc(sizeof(item));
+  int m;
+
+  curr->mat.data = (short**)malloc(SIZE*sizeof(short*));
+ for (m=0;m<SIZE;m++)
+   curr->mat.data[m] = (short*) malloc (SIZE * sizeof (short));
+ 
+ curr->mat.fixed = (short**) malloc(SIZE * sizeof(short*));
+ for (m=0;m<SIZE;m++)
+   curr->mat.fixed[m] = (short*) malloc (SIZE * sizeof (short));
+ 
+ 
 
   short x, y;
   //copy matrix
