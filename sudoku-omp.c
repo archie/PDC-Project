@@ -4,36 +4,36 @@
 #include <omp.h>
 
 #define SIZE 9
-#define INIT_STEP 40
+#define STEP 80
 
-long boards_created[8]; // assuming we will never run this on more than 8 cores
+long boards_processed[8]; // assuming we will never run this on more than 8 cores
 
 FILE *inputMatrix;
 
 typedef struct matrix {
-  int data[SIZE][SIZE];
-  int fixed[SIZE][SIZE];
+  short data[SIZE][SIZE];
+  short fixed[SIZE][SIZE];
 } MATRIX;
 
 struct list_el {
    MATRIX mat;
-   int i, j;
+   short i, j;
    struct list_el *next;
 };
 
 typedef struct list_el item;
 
+MATRIX solution;
+
 item *head;
 item *tail;
 
-MATRIX finalResult;
-
 MATRIX read_matrix_with_spaces(char *filename) {
   MATRIX matrix;
-  int i,j;
+  short i,j;
   char line[SIZE+1];
   char element[1];
-  int l;
+  short l;
   inputMatrix = fopen(filename, "rt");
 
   // init
@@ -58,10 +58,10 @@ MATRIX read_matrix_with_spaces(char *filename) {
   return matrix;
 }
 
-int permissible(MATRIX matrix, int i_line, int j_col) {
+short permissible(MATRIX matrix, short i_line, short j_col) {
 
-  int line, column;
-  int value = matrix.data[i_line][j_col];
+  short line, column;
+  short value = matrix.data[i_line][j_col];
 
   // check same column
   for (line = 0; line < SIZE; line++) {
@@ -83,8 +83,8 @@ int permissible(MATRIX matrix, int i_line, int j_col) {
   }
   
   // check group
-  int igroup = (i_line / 3) * 3;
-  int jgroup = (j_col / 3) * 3;
+  short igroup = (i_line / 3) * 3;
+  short jgroup = (j_col / 3) * 3;
   for (line = igroup; line < igroup+2; line++) {
     for (column = jgroup; column < jgroup+2; column++) {
       if (matrix.data[line][column] == 0)
@@ -101,82 +101,86 @@ int permissible(MATRIX matrix, int i_line, int j_col) {
   return 1;
 }
 
-void decreasePosition(int* iPointer, int* jPointer){
-  if (*jPointer == 0 && *iPointer > 0) {
-    *jPointer = SIZE - 1;
-    (*iPointer)--;
-  } else
-    (*jPointer)--;
-}
-
-void increasePosition(int* iPointer, int* jPointer){
-  if(*jPointer < SIZE-1)
-    (*jPointer)++;
-  else {
-    *jPointer = 0;
-    (*iPointer)++;
-  }
-}
-
-MATRIX bruteforce(MATRIX matrix) {
-    
-  int i, j;
-  i = 0;
-  j = 0;
-
-  while (i < SIZE) {
-
-    if (matrix.fixed[i][j] == 1)
-      // fixed cell
-      increasePosition(&i, &j);
-    else if (matrix.data[i][j] < SIZE) {    
-        // increase cell value, and check if
-        // new value is permissible
-
-        matrix.data[i][j]++;
-        if (permissible(matrix, i, j) == 1) {
-          increasePosition(&i, &j);
-        }
-
-    } else {
-      // tried all the values for this cell
-      // goes back to the previous non-fixed cell
-
-      matrix.data[i][j] = 0;
-
+void decreasePosition(MATRIX* matrix, short* iPointer, short* jPointer){
       do {
-        decreasePosition(&i, &j);
-      } while (matrix.fixed[i][j] == 1);
+        if (*jPointer == 0 && *iPointer > 0) {
+          *jPointer = SIZE - 1;
+          (*iPointer)--;
+        } else
+          (*jPointer)--;
+      } while (*jPointer >= 0 && (*matrix).fixed[*iPointer][*jPointer] == 1);
+}
 
-    } // end else
+void increasePosition(MATRIX* matrix, short* iPointer, short* jPointer){
+  
+  do{
+    if(*jPointer < SIZE-1)
+      (*jPointer)++;
+    else {
+      *jPointer = 0;
+      (*iPointer)++;
+    }
+  } while (*iPointer < SIZE && (*matrix).fixed[*iPointer][*jPointer]);
+}
 
-  } // end while
+//MATRIX bruteforce(MATRIX matrix) {
+//    
+//  int i, j;
+//  i = 0;
+//  j = 0;
+//
+//  while (i < SIZE) {
+//
+//    if (matrix.fixed[i][j] == 1)
+//      // fixed cell
+//      increasePosition(&i, &j);
+//    else if (matrix.data[i][j] < SIZE) {    
+//        // increase cell value, and check if
+//        // new value is permissible
+//
+//        matrix.data[i][j]++;
+//        if (permissible(matrix, i, j) == 1) {
+//          increasePosition(&i, &j);
+//        }
+//
+//    } else {
+//      // tried all the values for this cell
+//      // goes back to the previous non-fixed cell
+//
+//      matrix.data[i][j] = 0;
+//
+//      do {
+//        decreasePosition(&i, &j);
+//      } while (matrix.fixed[i][j] == 1);
+//
+//    } // end else
+//
+//  } // end while
+//
+//  return matrix;
+//} // end bruteforce
 
-  return matrix;
-} // end bruteforce
 
-
-item* createItem(MATRIX matrix, int i, int j){
-  boards_created[omp_get_thread_num()]++;
-
+item* createItem(MATRIX matrix, short i, short j){
   item * curr = (item *)malloc(sizeof(item));
 
-  int x, y;
+  short x, y;
   //copy matrix
+  //printf("New possibility:\n");
   for(x = 0; x < SIZE; x++){
     for(y = 0; y < SIZE; y++){
       curr->mat.data[x][y] = matrix.data[x][y];
       curr->mat.fixed[x][y] = matrix.fixed[x][y]; 
-      //      printf("%d ", matrix.data[x][y]);
+      //printf("%d ", matrix.data[x][y]);
     }
     //printf("\n");
   }
 
+
   curr->i = i;
   curr->j = j;
   curr->next = NULL;
-
-  // usleep(100000);
+  
   return curr;
 }
 
@@ -203,55 +207,34 @@ item* removeItem(){
   return result;
 }
 
-void initializePool(MATRIX matrix){
 
-  int i = 0;
-  int j = 0;
+/* Initialize permissible matrix pool */
+void initializePool(MATRIX* matrix){
 
-  int level = 1;
+  short i = 0;
+  short j = 0;
 
-  while (level > 0 && i < SIZE) {
-    if (level <= INIT_STEP && matrix.data[i][j] < SIZE) {
-      // increase cell value, and check if
-      // new value is permissible
-      matrix.data[i][j]++;
-      if (permissible(matrix, i, j) == 1) {
-        do{
-          increasePosition(&i, &j);
-        } while (i < SIZE && matrix.fixed[i][j] == 1);
+  if ((*matrix).fixed[i][j] == 1)
+    increasePosition(matrix, &i, &j);
 
-        if(level < INIT_STEP) {
-          level++;
-        } else {
-          item* newPath = createItem(matrix, i, j);
-          attachItem(newPath);
-        }
-      }
-    } else {
-      // tried all the values for this cell
-      // goes back to the previous non-fixed cell
-       matrix.data[i][j] = 0;
-       do {
-        decreasePosition(&i, &j);
-       } while (i >= 0 && matrix.fixed[i][j] == 1);
-
-        level--;
-    } // end else
-  } // end while
+  short num;
+  for(num = 0; num < SIZE; num++){
+    ((*matrix).data[i][j])++;    
+    if (permissible(*matrix, i, j) == 1) {
+      item* newPath = createItem(*matrix, i, j);
+      attachItem(newPath);
+    } 
+  }
 
 }
 
-MATRIX* bf_pool(MATRIX matrix) {
+short bf_pool(MATRIX matrix) {
 
   head = NULL;
   tail = NULL;
 
-  /* Initialize permissible matrix pool */
-  // (should be done only by the master thread)
+  initializePool(&matrix);
 
-  initializePool(matrix);
-
-  /* End initialization */
 
   /* Begin of parallel block
       - result is a global variable
@@ -260,63 +243,77 @@ MATRIX* bf_pool(MATRIX matrix) {
         and attachItem should be exclusive
   */
 
-  /* Remove matrix from pool, and
-     try to solve it
+  /* Remove matrix from repository, and
+     move to the next non-fixed position,
+     adding permissible matrices to the
+     repository for the next iteration 
    */
 
-  MATRIX* result = NULL;
+  short found = 0;
   item* current;
-  int i,j;
+  short i, j, num;
 
-#pragma omp parallel shared(result) private(i,j,current)
+#pragma omp parallel shared(found) private(i,j, current) 
 {
-#pragma omp critical (pool) 
-{
+
+  #pragma omp critical (pool)
   current = removeItem();
-}
-  while(current != NULL && result == NULL){
+  while(current != NULL && found == 0){
+
+    boards_processed[omp_get_thread_num()]++;
     MATRIX currMat = current->mat;
+
     i = current->i;
     j = current->j;
 
-    while (i >= 0 && i < SIZE && result == NULL) {
-      if (currMat.data[i][j] < SIZE) {    
-        // increase cell value, and check if
-        // new value is permissible
-        currMat.data[i][j]++;
+    increasePosition(&currMat, &i, &j);
 
-        if (permissible(currMat, i, j) == 1) {
-          do{
-            increasePosition(&i, &j);
-          } while (i < SIZE && currMat.fixed[i][j] == 1);
-        }
+    int level = 1;
+
+    while (level > 0 && i < SIZE && found == 0) {
+      if (level <= STEP && currMat.data[i][j] < SIZE) {    
+          // increase cell value, and check if
+          // new value is permissible
+          currMat.data[i][j]++;
+
+          if (permissible(currMat, i, j) == 1) {
+            if(level < STEP) {
+              increasePosition(&currMat, &i, &j);
+              level++;
+            } else {
+              item* newPath = createItem(currMat, i, j);
+              #pragma omp critical (pool)              
+              attachItem(newPath);
+              //sleep(10);
+            }
+          }
       } else {
-        // tried all the values for this cell
         // goes back to the previous non-fixed cell
-        currMat.data[i][j] = 0;
 
-        do {
-          decreasePosition(&i, &j);
-        } while (i >= 0 && currMat.fixed[i][j] == 1);
+        currMat.data[i][j] = 0;
+        decreasePosition(&currMat, &i, &j);
+        level--;
       } // end else
+
     } // end while
 
     if(i == SIZE){
-      finalResult = currMat;
-      result = &currMat;
+      found = 1;
+      solution = currMat;
       continue;
     }
 
     free(current);
-
-#pragma omp critical (pool)
+    #pragma omp critical (pool)
     current = removeItem();
-   } // end outer while (matrix pool iteration)
+   } //end while
 
 }  /* End of parallel block */ 
 
-  return result;
+
+  return found;
 }
+
 
 int main(int argc, char* argv[]) {
 
@@ -324,7 +321,10 @@ int main(int argc, char* argv[]) {
     printf("\n\n Usage: %s filename\n\n", argv[0]);
     exit(1);
   } 
-MATRIX m = read_matrix_with_spaces(argv[1]);
+
+
+  MATRIX m = read_matrix_with_spaces(argv[1]);
+
   int i,j;
 
   printf("\nInput Matrix:\n");
@@ -335,27 +335,28 @@ MATRIX m = read_matrix_with_spaces(argv[1]);
     printf("\n");
   }
 
-  MATRIX* result = bf_pool(m);
+  printf("\n\n");
+
+  int hasSolution = bf_pool(m);
   
-  if(result == NULL){
+  if(hasSolution == 0){
     printf("No result!\n");
     return 1;
   }
   
-  MATRIX solved = *result;
-  //MATRIX solved = bruteforce(m);  
-  printf("\nResult Matrix:\n");
+  printf("Result Matrix:\n");
   for (i = 0; i < SIZE; i++) {
     for (j = 0; j < SIZE; j++) {
-      printf("%d ", finalResult.data[i][j]);
+      printf("%d ", solution.data[i][j]);
     }
     printf("\n");
   }  
-
+  
+  
   printf("\nHas %d threads\n", omp_get_max_threads());
   int thread;
   for (thread = 0; thread < omp_get_max_threads(); thread++) {
-    printf("Thread %d: %ld\n", thread, boards_created[thread]);
+    printf("Thread %d: %ld\n", thread, boards_processed[thread]);
   }
 
   return 0;
