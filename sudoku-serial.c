@@ -1,14 +1,17 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
-#define SIZE 9
-#define STEP 80
+
+#define STEP 800000
+
+int SIZE;
+int l;
 
 FILE *inputMatrix;
 
 typedef struct matrix {
-  short data[SIZE][SIZE];
-  short fixed[SIZE][SIZE];
+  short **data;
+  short **fixed;
 } MATRIX;
 
 struct list_el {
@@ -25,33 +28,57 @@ item *head;
 item *tail;
 
 MATRIX read_matrix_with_spaces(char *filename) {
-  MATRIX matrix;
-  short i,j;
-  char line[SIZE+1];
-  char element[1];
-  short l;
+  int i,j;  
+  MATRIX matrix;  
+  int element_int;
+
   inputMatrix = fopen(filename, "rt");
 
-  // init
-  for (i=0; i < SIZE; i++)
-    for (j=0; j<SIZE; j++) 
-      matrix.fixed[i][j] = 0;
-	
-  fscanf(inputMatrix, "%s", element);
-	l = element[0]-'0';
-	printf("\nl=%d",l);
+  fscanf(inputMatrix, "%d", &element_int);
+  l = element_int;
+  SIZE = l*l;
 
-  for(i = 0; i < SIZE; i++)
+  printf("\nl=%d\tSIZE=%d",l, SIZE);
+
+  // allocate memory for matrix
+  matrix.data = (short**)malloc(SIZE*sizeof(short*));  
+  for (i=0;i<SIZE;i++)
+    matrix.data[i] = (short*) malloc (SIZE * sizeof (short));
+
+  matrix.fixed = (short**) malloc(SIZE * sizeof(short*));
+  for (i=0;i<SIZE;i++)
+    matrix.fixed[i] = (short*) malloc (SIZE * sizeof (short));
+  
+  // init
+  for (i=0; i<SIZE; i++) {
+    for (j=0; j<SIZE; j++) {     
+      matrix.fixed[i][j] = 0;
+    }
+  }
+  
+  for(i = 0; i < SIZE; i++) {
     for(j = 0; j < SIZE; j++){
-	    fscanf(inputMatrix, "%s", element);
-	    matrix.data[i][j] = element[0] - '0';
+      fscanf(inputMatrix, "%d", &element_int);
+      matrix.data[i][j] = element_int;
       if (matrix.data[i][j] != 0)
         matrix.fixed[i][j] = 1;
-    }
+    }  
+  }
   
   fclose(inputMatrix);
-
+  
   return matrix;
+}
+
+void printMatrix(MATRIX *matrix) {
+  int i,j;
+  for (i = 0; i < SIZE; i++) {
+    for (j = 0; j < SIZE; j++) {
+      printf("%d ", matrix->data[i][j]);
+    }
+    printf("\n");
+  }
+  printf("\n");
 }
 
 short permissible(MATRIX matrix, short i_line, short j_col) {
@@ -79,10 +106,10 @@ short permissible(MATRIX matrix, short i_line, short j_col) {
   }
   
   // check group
-  short igroup = (i_line / 3) * 3;
-  short jgroup = (j_col / 3) * 3;
-  for (line = igroup; line < igroup+2; line++) {
-    for (column = jgroup; column < jgroup+2; column++) {
+  short igroup = (i_line / l) * l;
+  short jgroup = (j_col / l) * l;
+  for (line = igroup; line < igroup+(l-1); line++) {
+    for (column = jgroup; column < jgroup+(l-1); column++) {
       if (matrix.data[line][column] == 0)
         continue;
 
@@ -157,10 +184,32 @@ void increasePosition(MATRIX* matrix, short* iPointer, short* jPointer){
 //} // end bruteforce
 
 
+void freeListElement(item *node) {
+  int i;
+  for (i = 0; i < SIZE; i++) {
+    free(node->mat.data[i]);
+    free(node->mat.fixed[i]);
+  }
+  free(node->mat.data);
+  free(node->mat.fixed);
+  free(node);
+}
+
 item* createItem(MATRIX matrix, short i, short j){
   item * curr = (item *)malloc(sizeof(item));
-
+  int m;
   short x, y;
+
+  /* allocate memory for new copy */
+  curr->mat.data = (short**)malloc(SIZE*sizeof(short*));
+  for (m=0;m<SIZE;m++)
+    curr->mat.data[m] = (short*) malloc (SIZE * sizeof (short));
+  
+  curr->mat.fixed = (short**) malloc(SIZE * sizeof(short*));
+  for (m=0;m<SIZE;m++)
+    curr->mat.fixed[m] = (short*) malloc (SIZE * sizeof (short));
+
+
   //copy matrix
   //printf("New possibility:\n");
   for(x = 0; x < SIZE; x++){
@@ -200,6 +249,7 @@ item* removeItem(){
       tail = NULL;
     }
   }
+  //printMatrix(&result->mat);
   return result;
 }
 
@@ -299,7 +349,6 @@ short bf_pool(MATRIX matrix) {
   return found;
 }
 
-
 int main(int argc, char* argv[]) {
 
   if(argv[1] == NULL) {
@@ -336,6 +385,14 @@ int main(int argc, char* argv[]) {
     }
     printf("\n");
   }  
+
+  item* node = head;
+
+  while (node != NULL) {
+    item* next = node->next;
+    freeListElement(node);
+    node = next;
+  }
   
   return 0;
 

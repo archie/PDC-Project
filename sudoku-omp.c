@@ -217,14 +217,12 @@ item* createItem(MATRIX matrix, short i, short j){
   int m;
 
   curr->mat.data = (short**)malloc(SIZE*sizeof(short*));
- for (m=0;m<SIZE;m++)
-   curr->mat.data[m] = (short*) malloc (SIZE * sizeof (short));
- 
- curr->mat.fixed = (short**) malloc(SIZE * sizeof(short*));
- for (m=0;m<SIZE;m++)
-   curr->mat.fixed[m] = (short*) malloc (SIZE * sizeof (short));
- 
- 
+  for (m=0;m<SIZE;m++)
+    curr->mat.data[m] = (short*) malloc (SIZE * sizeof (short));
+  
+  curr->mat.fixed = (short**) malloc(SIZE * sizeof(short*));
+  for (m=0;m<SIZE;m++)
+    curr->mat.fixed[m] = (short*) malloc (SIZE * sizeof (short));
 
   short x, y;
   //copy matrix
