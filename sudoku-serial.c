@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <time.h>
 
-#define STEP 800000
+//#define STEP 800000
 
 int SIZE;
 int l;
@@ -74,7 +74,7 @@ void printMatrix(MATRIX *matrix) {
   int i,j;
   for (i = 0; i < SIZE; i++) {
     for (j = 0; j < SIZE; j++) {
-      printf("%d ", matrix->data[i][j]);
+      printf("%2d ", matrix->data[i][j]);
     }
     printf("\n");
   }
@@ -307,28 +307,30 @@ short bf_pool(MATRIX matrix) {
 
     int level = 1;
 
-    while (level > 0 && i < SIZE && found == 0) {
-      if (level <= STEP && currMat.data[i][j] < SIZE) {    
-          // increase cell value, and check if
-          // new value is permissible
-          currMat.data[i][j]++;
+    while (i >= 0 && i < SIZE && found == 0) {
+      if (currMat.data[i][j] < SIZE) {    
+        // increase cell value, and check if
+        // new value is permissible
+        currMat.data[i][j]++;
 
-          if (permissible(currMat, i, j) == 1) {
-            if(level < STEP) {
-              increasePosition(&currMat, &i, &j);
-              level++;
-            } else {
-              item* newPath = createItem(currMat, i, j);
-              attachItem(newPath);
-              //sleep(10);
-            }
-          }
+        if (permissible(currMat, i, j) == 1) {
+//        if(level < STEP) {
+          increasePosition(&currMat, &i, &j);
+          //printMatrix(&currMat);
+          //sleep(1);
+        }
+//              level++;
+//            } else {
+//              item* newPath = createItem(currMat, i, j);
+//              attachItem(newPath);
+//            }
+//          }
       } else {
         // goes back to the previous non-fixed cell
 
         currMat.data[i][j] = 0;
         decreasePosition(&currMat, &i, &j);
-        level--;
+//      level--;
       } // end else
 
     } // end while
@@ -362,12 +364,7 @@ int main(int argc, char* argv[]) {
   int i,j;
 
   printf("\nInput Matrix:\n");
-  for (i = 0; i < SIZE; i++) {
-    for (j = 0; j < SIZE; j++) {
-      printf("%d ", m.data[i][j]);
-    }
-    printf("\n");
-  }
+  printMatrix(&m);
 
   printf("\n\n");
 
@@ -379,12 +376,7 @@ int main(int argc, char* argv[]) {
   }
   
   printf("Result Matrix:\n");
-  for (i = 0; i < SIZE; i++) {
-    for (j = 0; j < SIZE; j++) {
-      printf("%d ", solution.data[i][j]);
-    }
-    printf("\n");
-  }  
+  printMatrix(&solution);
 
   item* node = head;
 
