@@ -303,25 +303,33 @@ short bf_pool(MATRIX matrix) {
   short found = 0;
   short i, j;
   item* current;
+  int level;
 
-#pragma omp parallel shared(found) private(i,j, current)
+#pragma omp parallel shared(found) private(i,j, current, level)
 {
 
   #pragma omp critical (pool)
   current = removeItem();
+  
   while(current != NULL && found == 0){
     boards_processed[omp_get_thread_num()]++;
-
     
     MATRIX currMat = current->mat;
+
+    #pragma omp critical(print)
+    {
+    printf("Thread %d Removed following matrix from pool:\n", omp_get_thread_num());
+    printMatrix(&currMat);
+    }
+
     i = current->i;
     j = current->j;
 
     increasePosition(&currMat, &i, &j);
 
-    int level = 1;
+    level = 1;
 
-    while (i >= 0 && i < SIZE && found == 0) {
+    while (level > 0 && i < SIZE && found == 0) {
       if (currMat.data[i][j] < SIZE) {    
         // increase cell value, and check if
         // new value is permissible
@@ -330,6 +338,7 @@ short bf_pool(MATRIX matrix) {
         if (permissible(currMat, i, j) == 1) {
 //        if(level < STEP) {
           increasePosition(&currMat, &i, &j);
+          level++;
 //        printMatrix(&currMat);
 //        sleep(1);
         }
@@ -344,7 +353,7 @@ short bf_pool(MATRIX matrix) {
 
         currMat.data[i][j] = 0;
         decreasePosition(&currMat, &i, &j);
-//      level--;
+        level--;
       } // end else
 
     } // end while
@@ -360,7 +369,16 @@ short bf_pool(MATRIX matrix) {
 
     #pragma omp critical (pool)
     current = removeItem();
+
+//    #pragma omp critical (pool)
+//    current = removeItem();
    }
+
+    #pragma omp critical(print)
+    {
+    printf("Thread %d has no more work to do. Found = %d.\n", omp_get_thread_num(), found);
+    }
+
 
 }  /* End of parallel block */ 
 

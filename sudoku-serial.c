@@ -106,8 +106,8 @@ short permissible(MATRIX matrix, short i_line, short j_col) {
   }
   
   // check group
-  short igroup = (i_line / l) * l;
-  short jgroup = (j_col / l) * l;
+  short igroup = ((i_line / l) * l);
+  short jgroup = ((j_col / l) * l);
   for (line = igroup; line < igroup+(l-1); line++) {
     for (column = jgroup; column < jgroup+(l-1); column++) {
       if (matrix.data[line][column] == 0)
@@ -143,7 +143,7 @@ void increasePosition(MATRIX* matrix, short* iPointer, short* jPointer){
       *jPointer = 0;
       (*iPointer)++;
     }
-  } while (*iPointer < SIZE && (*matrix).fixed[*iPointer][*jPointer]);
+  } while (*iPointer < SIZE && (*matrix).fixed[*iPointer][*jPointer] == 1);
 }
 
 //MATRIX bruteforce(MATRIX matrix) {
@@ -269,7 +269,7 @@ void initializePool(MATRIX* matrix){
     if (permissible(*matrix, i, j) == 1) {
       item* newPath = createItem(*matrix, i, j);
       attachItem(newPath);
-    } 
+    }
   }
 
 }
@@ -300,6 +300,10 @@ short bf_pool(MATRIX matrix) {
   item* current = removeItem();
   while(current != NULL && found == 0){
     MATRIX currMat = current->mat;
+ 
+    printf("Removed following matrix from pool:\n");
+    printMatrix(&currMat);
+ 
     i = current->i;
     j = current->j;
 
@@ -307,7 +311,7 @@ short bf_pool(MATRIX matrix) {
 
     int level = 1;
 
-    while (i >= 0 && i < SIZE && found == 0) {
+    while (level > 0 && i < SIZE && found == 0) {
       if (currMat.data[i][j] < SIZE) {    
         // increase cell value, and check if
         // new value is permissible
@@ -315,9 +319,12 @@ short bf_pool(MATRIX matrix) {
 
         if (permissible(currMat, i, j) == 1) {
 //        if(level < STEP) {
+//          if(i==0 && j==5)
+//            printMatrix(&currMat);
+          
           increasePosition(&currMat, &i, &j);
-          //printMatrix(&currMat);
-          //sleep(1);
+          level++;
+         //sleep(1);
         }
 //              level++;
 //            } else {
@@ -330,7 +337,7 @@ short bf_pool(MATRIX matrix) {
 
         currMat.data[i][j] = 0;
         decreasePosition(&currMat, &i, &j);
-//      level--;
+        level--;
       } // end else
 
     } // end while
