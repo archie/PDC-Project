@@ -2,8 +2,6 @@
 #include <stdio.h>
 #include <time.h>
 
-//#define STEP 800000
-
 int SIZE;
 int l;
 
@@ -37,8 +35,6 @@ MATRIX read_matrix_with_spaces(char *filename) {
   fscanf(inputMatrix, "%d", &element_int);
   l = element_int;
   SIZE = l*l;
-
-  printf("\nl=%d\tSIZE=%d",l, SIZE);
 
   // allocate memory for matrix
   matrix.data = (short**)malloc(SIZE*sizeof(short*));  
@@ -78,7 +74,6 @@ void printMatrix(MATRIX *matrix) {
     }
     printf("\n");
   }
-  printf("\n");
 }
 
 short permissible(MATRIX matrix, short i_line, short j_col) {
@@ -108,8 +103,8 @@ short permissible(MATRIX matrix, short i_line, short j_col) {
   // check group
   short igroup = ((i_line / l) * l);
   short jgroup = ((j_col / l) * l);
-  for (line = igroup; line < igroup+(l-1); line++) {
-    for (column = jgroup; column < jgroup+(l-1); column++) {
+  for (line = igroup; line < igroup+l; line++) {
+    for (column = jgroup; column < jgroup+l; column++) {
       if (matrix.data[line][column] == 0)
         continue;
 
@@ -146,43 +141,6 @@ void increasePosition(MATRIX* matrix, short* iPointer, short* jPointer){
   } while (*iPointer < SIZE && (*matrix).fixed[*iPointer][*jPointer] == 1);
 }
 
-//MATRIX bruteforce(MATRIX matrix) {
-//    
-//  int i, j;
-//  i = 0;
-//  j = 0;
-//
-//  while (i < SIZE) {
-//
-//    if (matrix.fixed[i][j] == 1)
-//      // fixed cell
-//      increasePosition(&i, &j);
-//    else if (matrix.data[i][j] < SIZE) {    
-//        // increase cell value, and check if
-//        // new value is permissible
-//
-//        matrix.data[i][j]++;
-//        if (permissible(matrix, i, j) == 1) {
-//          increasePosition(&i, &j);
-//        }
-//
-//    } else {
-//      // tried all the values for this cell
-//      // goes back to the previous non-fixed cell
-//
-//      matrix.data[i][j] = 0;
-//
-//      do {
-//        decreasePosition(&i, &j);
-//      } while (matrix.fixed[i][j] == 1);
-//
-//    } // end else
-//
-//  } // end while
-//
-//  return matrix;
-//} // end bruteforce
-
 
 void freeListElement(item *node) {
   int i;
@@ -211,14 +169,11 @@ item* createItem(MATRIX matrix, short i, short j){
 
 
   //copy matrix
-  //printf("New possibility:\n");
   for(x = 0; x < SIZE; x++){
     for(y = 0; y < SIZE; y++){
       curr->mat.data[x][y] = matrix.data[x][y];
       curr->mat.fixed[x][y] = matrix.fixed[x][y]; 
-      //printf("%d ", matrix.data[x][y]);
     }
-    //printf("\n");
   }
 
 
@@ -249,13 +204,56 @@ item* removeItem(){
       tail = NULL;
     }
   }
-  //printMatrix(&result->mat);
   return result;
 }
 
+/* Improved Initialize permissible matrix pool */
+void initializePool(MATRIX* matrix){
+
+  short i = 0;
+  short j = 0;
+
+  if ((*matrix).fixed[i][j] == 1)
+    increasePosition(matrix, &i, &j);
+
+  short num=0;
+  short valid_value=0;
+
+    while( num<SIZE*2 && i<SIZE && j<SIZE )
+      {
+	    ((*matrix).data[i][j])++;    
+     //adding the matrix to the pool only if the value is permissible
+    if (permissible(*matrix, i, j) == 1 && matrix->data[i][j] <= SIZE) {
+      item* newPath = createItem(*matrix, i, j);
+      attachItem(newPath);
+
+            //printf("matrix %d added to pool\n",num);
+            //printMatrix(matrix);
+	    //printf("\n");
+
+      valid_value = matrix->data[i][j];
+      num++;
+    }
+    else if(matrix->data[i][j] <= SIZE) {
+      continue;
+    }
+
+    //moving to next position if all values have been tried for this position
+    else {
+      matrix->data[i][j] = valid_value;
+      increasePosition(matrix, &i, &j); 
+    }
+    /*end of changes done by wasif*/	
+      }
+   
+//printf("\nCreated %d initial boards.\n", created);
+
+}
+
+
 
 /* Initialize permissible matrix pool */
-void initializePool(MATRIX* matrix){
+void initializePool2(MATRIX* matrix){
 
   short i = 0;
   short j = 0;
@@ -301,9 +299,6 @@ short bf_pool(MATRIX matrix) {
   while(current != NULL && found == 0){
     MATRIX currMat = current->mat;
  
-    printf("Removed following matrix from pool:\n");
-    printMatrix(&currMat);
- 
     i = current->i;
     j = current->j;
 
@@ -318,20 +313,10 @@ short bf_pool(MATRIX matrix) {
         currMat.data[i][j]++;
 
         if (permissible(currMat, i, j) == 1) {
-//        if(level < STEP) {
-//          if(i==0 && j==5)
-//            printMatrix(&currMat);
-          
           increasePosition(&currMat, &i, &j);
           level++;
-         //sleep(1);
         }
-//              level++;
-//            } else {
-//              item* newPath = createItem(currMat, i, j);
-//              attachItem(newPath);
-//            }
-//          }
+
       } else {
         // goes back to the previous non-fixed cell
 
@@ -370,19 +355,16 @@ int main(int argc, char* argv[]) {
 
   int i,j;
 
-  printf("\nInput Matrix:\n");
-  printMatrix(&m);
-
-  printf("\n\n");
+//  printf("\nInput Matrix:\n");
+//  printMatrix(&m);
 
   short hasSolution = bf_pool(m);
   
   if(hasSolution == 0){
-    printf("No result!\n");
+    printf("No solution\n");
     return 1;
   }
   
-  printf("Result Matrix:\n");
   printMatrix(&solution);
 
   item* node = head;
