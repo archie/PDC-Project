@@ -231,6 +231,7 @@ void initializePool2(MATRIX* matrix){
 }
 
 /* Improved Initialize permissible matrix pool */
+/* Improved Initialize permissible matrix pool */
 void initializePool(MATRIX* matrix){
 
   short i = 0;
@@ -242,34 +243,33 @@ void initializePool(MATRIX* matrix){
   short num=0;
   short valid_value=0;
 
-    while( num<SIZE*2 && i<SIZE && j<SIZE )
-      {
-	    ((*matrix).data[i][j])++;    
-     //adding the matrix to the pool only if the value is permissible
-    if (permissible(*matrix, i, j) == 1 && matrix->data[i][j] <= SIZE) {
+  while( num<2*SIZE && i<SIZE ) {
+    ((*matrix).data[i][j])++;    
+    
+    //adding the matrix to the pool only if the value is permissible
+    if (matrix->data[i][j] <= SIZE && permissible(*matrix, i, j) == 1) {
       item* newPath = createItem(*matrix, i, j);
       attachItem(newPath);
-
-            //printf("matrix %d added to pool\n",num);
-            //printMatrix(matrix);
-	    //printf("\n");
-
+      //printf("matrix %d added to pool\n",num);
+      //printMatrix(matrix);
+      //printf("\n");
       valid_value = matrix->data[i][j];
       num++;
-    }
-    else if(matrix->data[i][j] <= SIZE) {
-      continue;
-    }
-
-    //moving to next position if all values have been tried for this position
-    else {
-      matrix->data[i][j] = valid_value;
-      increasePosition(matrix, &i, &j); 
-    }
-    /*end of changes done by wasif*/	
+    } else if(matrix->data[i][j] > SIZE) {
+      if (valid_value != 0){
+        //moving to next position if all values have been tried for this position
+        matrix->data[i][j] = valid_value;
+        increasePosition(matrix, &i, &j);
+        valid_value = 0;
+      } else {
+        //no valid value was found in this position, impossible to move to next position
+        break;
       }
+    }
+  /*end of changes done by wasif*/	
+ }
    
-//printf("\nCreated %d initial boards.\n", created);
+//printf("\nCreated %d initial boards.\n", num);
 
 }
 
