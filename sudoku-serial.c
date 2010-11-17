@@ -2,10 +2,7 @@
 #include <stdio.h>
 #include <time.h>
 
-int SIZE;
-int l;
-
-FILE *inputMatrix;
+/* Global variable declarations */
 
 typedef struct matrix {
   short **data;
@@ -19,12 +16,21 @@ struct list_el {
 };
 
 typedef struct list_el item;
-
+int l;
+int SIZE;
+FILE *inputMatrix;
 MATRIX solution;
-
 item *head;
 item *tail;
 
+/* Global variable declarations end here*/
+
+
+
+/*
+  Function: read_matrix_with_spaces(char *filename)
+  Description: fetches the input matrix from a file
+*/
 MATRIX read_matrix_with_spaces(char *filename) {
   int i,j;  
   MATRIX matrix;  
@@ -66,6 +72,11 @@ MATRIX read_matrix_with_spaces(char *filename) {
   return matrix;
 }
 
+
+/*
+  Function: printMatrix(MATRIX *matrix)
+  Description: prints a MATRIX to the standard output
+*/
 void printMatrix(MATRIX *matrix) {
   int i,j;
   for (i = 0; i < SIZE; i++) {
@@ -76,6 +87,11 @@ void printMatrix(MATRIX *matrix) {
   }
 }
 
+
+/*
+  Function: permissible(MATRIX matrix, short i_line, short j_co)
+  Description: checks if the value at (i_line, j_col) in the matrix is permissible or not. Returns 1 if it is permissible and 0 if it is not
+*/
 short permissible(MATRIX matrix, short i_line, short j_col) {
 
   short line, column;
@@ -119,6 +135,10 @@ short permissible(MATRIX matrix, short i_line, short j_col) {
   return 1;
 }
 
+/*
+  Function: decreasePosition(MATRIX* matrix, short* iPointer, short* jPointer)
+  Description: moves the pointer in backward direction to a non-fixed value
+*/
 void decreasePosition(MATRIX* matrix, short* iPointer, short* jPointer){
       do {
         if (*jPointer == 0 && *iPointer > 0) {
@@ -129,6 +149,11 @@ void decreasePosition(MATRIX* matrix, short* iPointer, short* jPointer){
       } while (*jPointer >= 0 && (*matrix).fixed[*iPointer][*jPointer] == 1);
 }
 
+
+/*
+  Function: increasePosition(MATRIX* matrix, short* iPointer, short* jPointer)
+  Description: moves the pointer in forward direction to a non-fixed value
+*/
 void increasePosition(MATRIX* matrix, short* iPointer, short* jPointer){
   
   do{
@@ -142,6 +167,11 @@ void increasePosition(MATRIX* matrix, short* iPointer, short* jPointer){
 }
 
 
+
+/*
+  Function: freeListElement(item *node)
+  Description: deallocates memory for the item node 
+*/
 void freeListElement(item *node) {
   int i;
   for (i = 0; i < SIZE; i++) {
@@ -153,6 +183,11 @@ void freeListElement(item *node) {
   free(node);
 }
 
+
+/*
+  Function: createItem(MATRIX matrix, short i, short j)
+  Description: creates an item for the matrix and returns it 
+ */
 item* createItem(MATRIX matrix, short i, short j){
   item * curr = (item *)malloc(sizeof(item));
   int m;
@@ -184,6 +219,10 @@ item* createItem(MATRIX matrix, short i, short j){
   return curr;
 }
 
+/*
+  Function: attachItem(MATRIX matrix, short i, short j)
+  Description: adds an item to the tail of the linked list 
+ */
 void attachItem(item* newItem){
 
   if(head == NULL){
@@ -195,6 +234,10 @@ void attachItem(item* newItem){
   }
 }
 
+/*
+  Function: removeItem()
+  Description: removes an item from the head of the linked list and returns it
+ */
 item* removeItem(){
   item* result = NULL;
   if(head != NULL){
@@ -207,7 +250,10 @@ item* removeItem(){
   return result;
 }
 
-/* Improved Initialize permissible matrix pool */
+/* 
+   Function: initializePool(MATRIX* matrix)
+   Description: Initializes the pool with matrices
+*/
 void initializePool(MATRIX* matrix){
 
   short i = 0;
@@ -362,6 +408,11 @@ short bf_pool(MATRIX matrix) {
   return found;
 }
 
+
+/* 
+   Function: main
+   Description: main function
+*/
 int main(int argc, char* argv[]) {
 
   if(argv[1] == NULL) {
@@ -369,25 +420,19 @@ int main(int argc, char* argv[]) {
     exit(1);
   } 
 
-
   MATRIX m = read_matrix_with_spaces(argv[1]);
 
-  int i,j;
-
-//  printf("\nInput Matrix:\n");
-//  printMatrix(&m);
-
+  //sending the input matrix to the bf_pool method which would return 1 if a solution is found
   short hasSolution = bf_pool(m);
-  
   if(hasSolution == 0){
     printf("No solution\n");
     return 1;
   }
-  
+  //printing the solution to the standard output  
   printMatrix(&solution);
-
+  
+  //deallocating memory
   item* node = head;
-
   while (node != NULL) {
     item* next = node->next;
     freeListElement(node);
