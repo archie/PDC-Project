@@ -217,34 +217,55 @@ void initializePool(MATRIX* matrix){
     increasePosition(matrix, &i, &j);
 
   short num=0;
-  short valid_value=0;
 
-  while( num<2*SIZE && i<SIZE ) {
+  item* current = NULL;
+
+  while(1) {
     ((*matrix).data[i][j])++;    
     
     //adding the matrix to the pool only if the value is permissible
     if (matrix->data[i][j] <= SIZE && permissible(*matrix, i, j) == 1) {
       item* newPath = createItem(*matrix, i, j);
       attachItem(newPath);
-      //printf("matrix %d added to pool\n",num);
+      //printf("matrix %d added to pool i=%d, j=%d\n",num, i, j);
       //printMatrix(matrix);
       //printf("\n");
-      valid_value = matrix->data[i][j];
       num++;
     } else if(matrix->data[i][j] > SIZE) {
-      if (valid_value != 0){
-        //moving to next position if all values have been tried for this position
-        matrix->data[i][j] = valid_value;
-        increasePosition(matrix, &i, &j);
-        valid_value = 0;
-      } else {
-        //no valid value was found in this position, impossible to move to next position
+      if(current != NULL){
+        freeListElement(current);
+      }
+      
+      if(num >= SIZE){
         break;
       }
+
+      item* current = removeItem();
+
+      if(current == NULL){
+        break;
+      }
+
+      matrix = &(current->mat);
+      i = current->i;
+      j = current->j;
+      
+      if(i == SIZE-1 && j == SIZE-1){
+        //Is a solution
+        attachItem(current);
+        break;
+      }
+
+      num--;
+
+      increasePosition(matrix, &i, &j);
     }
-  /*end of changes done by wasif*/	
  }
-   
+
+ if(current != NULL){
+    freeListElement(current);
+ }
+
 //printf("\nCreated %d initial boards.\n", num);
 
 }
